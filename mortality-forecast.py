@@ -256,8 +256,8 @@ np.savetxt('lstm.txt', np.asarray(res), fmt='%s')
 
 # geriausi modeliai
 
-gru_mod = gru_arr[1]
-lstm_mod = lstm_arr[3]
+gru_mod = gru_models[1]
+lstm_mod = lstm_models[3]
 
 # grafikas palyginti prognozes ir tikrąsias reikšmes pagal metus
 
