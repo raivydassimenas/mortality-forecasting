@@ -350,92 +350,181 @@ gru_test_prediction = gru_mod([test_predictors, test_conditions] if CONDITIONAL_
 lstm_train_prediction = lstm_mod([train_predictors, train_conditions] if CONDITIONAL_RNN else train_predictors)
 lstm_test_prediction = lstm_mod([test_predictors, test_conditions] if CONDITIONAL_RNN else test_predictors)
 
-MODEL_FOR_PLOTTING = "GRU"
 
-if MODEL_FOR_PLOTTING == "GRU":
-    train_prediction_plot = scaler.inverse_transform(gru_train_prediction)
-    test_prediction_plot = scaler.inverse_transform(gru_test_prediction)
-elif MODEL_FOR_PLOTTING == "LSTM":
-    train_prediction_plot = scaler.inverse_transform(lstm_train_prediction)
-    test_prediction_plot = scaler.inverse_transform(lstm_test_prediction)
-train_response_plot = scaler.inverse_transform(train_response)
-test_response_plot = scaler.inverse_transform(test_response)
+def make_plots(model_to_plot, plot_women):
+    train_prediction_plot = scaler.inverse_transform(model_to_plot[0])
+    test_prediction_plot = scaler.inverse_transform(model_to_plot[1])
+    train_response_plot = scaler.inverse_transform(train_response)
+    test_response_plot = scaler.inverse_transform(test_response)
 
-PLOT_WOMEN = False
+    fig, axs = plt.subplots(3, 4, figsize=(20, 15))
+    x = np.unique(dataset.index)
+    age_groups = [0, 2, 6, 10]
+    titles = ["Lithuanian men, ", "Latvian men, ", "Estonian men, "]
 
-fig, axs = plt.subplots(3, 4, figsize=(20, 15))
-x = np.unique(dataset.index)
-age_groups = [0, 2, 6, 10]
-titles = ["Lithuanian men, ", "Latvian men, ", "Estonian men, "]
+    for i in range(3):
+        for j in range(4):
+            age_group = age_groups[j]
 
-for i in range(3):
-    for j in range(4):
-        agegroup = age_groups[j]
+            train_plot = np.empty_like(dataset.iloc[:61, 4:])
+            train_plot[:] = np.nan
+            ind = int(len(train_prediction_plot) / 6)
+            train_plot[WINDOW:ind + WINDOW, :] = train_prediction_plot[
+                                                 ind * (2 * i + int(plot_women)):(ind * (2 * i + 1 + int(PLOT_WOMEN))),
+                                                 :]
 
-        train_plot = np.empty_like(dataset.iloc[:61, 4:])
-        train_plot[:] = np.nan
-        ind = int(len(train_prediction_plot) / 6)
-        train_plot[WINDOW:ind + WINDOW, :] = train_prediction_plot[
-                                             ind * (2 * i + int(PLOT_WOMEN)):(ind * (2 * i + 1 + int(PLOT_WOMEN))), :]
+            test_plot = np.empty_like(dataset.iloc[:61, 4:])
+            test_plot[:] = np.nan
+            ts_ind = int(len(test_prediction_plot) / 6)
+            test_plot[ind + 2 * WINDOW:len(test_plot), :] = test_prediction_plot[ts_ind * (2 * i + int(PLOT_WOMEN)):(
+                    ts_ind * (2 * i + 1 + int(plot_women))), :]
 
-        test_plot = np.empty_like(dataset.iloc[:61, 4:])
-        test_plot[:] = np.nan
-        ts_ind = int(len(test_prediction_plot) / 6)
-        test_plot[ind + 2 * WINDOW:len(test_plot), :] = test_prediction_plot[ts_ind * (2 * i + int(PLOT_WOMEN)):(
-                ts_ind * (2 * i + 1 + int(PLOT_WOMEN))), :]
+            axs[i, j].plot(x, scaler.inverse_transform(
+                dataset.iloc[61 * (2 * i + int(plot_women)):61 * (2 * i + 1 + int(plot_women)), 4:])[:61, age_group],
+                           label="actual values", linewidth=0.7, linestyle="dotted", color="black")
+            axs[i, j].plot(x, train_plot[:, age_group], label="training", linewidth=0.7, color="forestgreen")
+            axs[i, j].plot(x, test_plot[:, age_group], label="forecast", linewidth=0.7, color="hotpink")
+            axs[i, j].set_title(titles[i] + dataset.iloc[4:, 4 + age_group].name)
 
-        axs[i, j].plot(x, scaler.inverse_transform(
-            dataset.iloc[61 * (2 * i + int(PLOT_WOMEN)):61 * (2 * i + 1 + int(PLOT_WOMEN)), 4:])[:61, agegroup],
-                       label="actual values", linewidth=0.7, linestyle="dotted", color="black")
-        axs[i, j].plot(x, train_plot[:, agegroup], label="training", linewidth=0.7, color="forestgreen")
-        axs[i, j].plot(x, test_plot[:, agegroup], label="forecast", linewidth=0.7, color="hotpink")
-        axs[i, j].set_title(titles[i] + dataset.iloc[4:, 4 + agegroup].name)
+    for i in range(4):
+        axs[2, i].set_xlabel("Year")
 
-for i in range(4):
-    axs[2, i].set_xlabel("Year")
+    for i in range(3):
+        axs[i, 0].set_ylabel("Mortality")
+    plt.savefig(model_to_plot + ".png", dpi=300)
+    # plt.show()
 
-for i in range(3):
-    axs[i, 0].set_ylabel("Mortality")
-plt.savefig(MODEL_FOR_PLOTTING + ".png", dpi=300)
-plt.show()
+    # Forecast and actual data by year
 
-# Forecast and actual data by year
+    t_train_prediction_plot = train_prediction_plot.transpose(1, 0)
+    t_train_response_plot = train_response_plot.transpose(1, 0)
+    t_test_prediction_plot = test_prediction_plot.transpose(1, 0)
+    t_test_response_plot = test_response_plot.transpose(1, 0)
 
-t_train_prediction_plot = train_prediction_plot.transpose(1, 0)
-t_train_response_plot = train_response_plot.transpose(1, 0)
-t_test_prediction_plot = test_prediction_plot.transpose(1, 0)
-t_test_response_plot = test_response_plot.transpose(1, 0)
+    t_train_plot = np.empty_like(dataset.iloc[:61, 4:]).transpose(1, 0)
+    t_train_plot[:] = np.nan
+    t_train_plot[:, :TRAINING_SIZE - WINDOW] = t_train_prediction_plot[:, :TRAINING_SIZE - WINDOW]
 
-t_train_plot = np.empty_like(dataset.iloc[:61, 4:]).transpose(1, 0)
-t_train_plot[:] = np.nan
-t_train_plot[:, :TRAINING_SIZE - WINDOW] = t_train_prediction_plot[:, :TRAINING_SIZE - WINDOW]
+    t_test_plot = np.empty_like(dataset.iloc[:61, 4:]).transpose(1, 0)
+    t_test_plot[:] = np.nan
+    t_test_plot[:, TRAINING_SIZE + WINDOW:62] = t_test_prediction_plot[:, :61 - TRAINING_SIZE - WINDOW]
 
-t_test_plot = np.empty_like(dataset.iloc[:61, 4:]).transpose(1, 0)
-t_test_plot[:] = np.nan
-t_test_plot[:, TRAINING_SIZE + WINDOW:62] = t_test_prediction_plot[:, :61 - TRAINING_SIZE - WINDOW]
+    plt.plot(
+        scaler.inverse_transform(dataset.iloc[:, 4:]).transpose(1, 0)[:, 60],
+        label="actual values",
+        color="black",
+        linewidth=0.7)
+    plt.plot(t_test_plot[:, 60], label="forecast", linewidth=0.7, color="red")
+    plt.legend(loc="upper left")
+    plt.title("Lithuanian male mortality in 2019 (plot of model " + model_to_plot + ")")
+    plt.savefig("mort" + model_to_plot + ".png", dpi=300)
+    # plt.show()
 
-plt.plot(
-    scaler.inverse_transform(dataset.iloc[:, 4:]).transpose(1, 0)[:, 60],
-    label="actual values",
-    color="black",
-    linewidth=0.7)
-plt.plot(t_test_plot[:, 60], label="forecast", linewidth=0.7, color="red")
-plt.legend(loc="upper left")
-plt.title("Lithuanian male mortality in 2019 (plot of model " + MODEL_FOR_PLOTTING +")")
-plt.savefig("mort" + MODEL_FOR_PLOTTING + ".png", dpi=300)
-plt.show()
+    plt.plot(
+        np.log(
+            scaler.inverse_transform(dataset.iloc[:, 4:]).transpose(1, 0))[:, 60],
+        label="actual values",
+        color="black",
+        linewidth=0.7)
+    plt.plot(np.log(t_test_plot)[:, 60], label="forecast", color="red", linewidth=0.7)
+    plt.title("Lithuanian male logarithmic mortality in 2019 (plot of model " + model_to_plot + ")")
+    plt.legend(loc="upper left")
+    plt.savefig("logmort" + model_to_plot + ".png", dpi=300)
+    # plt.show()
 
-plt.plot(
-    np.log(
-        scaler.inverse_transform(dataset.iloc[:, 4:]).transpose(1, 0))[:, 60],
-    label="actual values",
-    color="black",
-    linewidth=0.7)
-plt.plot(np.log(t_test_plot)[:, 60], label="forecast", color="red", linewidth=0.7)
-plt.title("Lithuanian male logarithmic mortality in 2019 (plot of model " + MODEL_FOR_PLOTTING + ")")
-plt.legend(loc="upper left")
-plt.savefig("logmort" + MODEL_FOR_PLOTTING + ".png", dpi=300)
-plt.show()
+
+make_plots("GRU", False)
+make_plots("GRU", True)
+make_plots("LSTM", False)
+make_plots("LSTM", True)
+
+
+# MODEL_FOR_PLOTTING = "GRU"
+
+# if MODEL_FOR_PLOTTING == "GRU":
+#     train_prediction_plot = scaler.inverse_transform(gru_train_prediction)
+#     test_prediction_plot = scaler.inverse_transform(gru_test_prediction)
+# elif MODEL_FOR_PLOTTING == "LSTM":
+#     train_prediction_plot = scaler.inverse_transform(lstm_train_prediction)
+#     test_prediction_plot = scaler.inverse_transform(lstm_test_prediction)
+# train_response_plot = scaler.inverse_transform(train_response)
+# test_response_plot = scaler.inverse_transform(test_response)
+#
+# PLOT_WOMEN = False
+
+# fig, axs = plt.subplots(3, 4, figsize=(20, 15))
+# x = np.unique(dataset.index)
+# age_groups = [0, 2, 6, 10]
+# titles = ["Lithuanian men, ", "Latvian men, ", "Estonian men, "]
+#
+# for i in range(3):
+#     for j in range(4):
+#         age_group = age_groups[j]
+#
+#         train_plot = np.empty_like(dataset.iloc[:61, 4:])
+#         train_plot[:] = np.nan
+#         ind = int(len(train_prediction_plot) / 6)
+#         train_plot[WINDOW:ind + WINDOW, :] = train_prediction_plot[
+#                                              ind * (2 * i + int(PLOT_WOMEN)):(ind * (2 * i + 1 + int(PLOT_WOMEN))), :]
+#
+#         test_plot = np.empty_like(dataset.iloc[:61, 4:])
+#         test_plot[:] = np.nan
+#         ts_ind = int(len(test_prediction_plot) / 6)
+#         test_plot[ind + 2 * WINDOW:len(test_plot), :] = test_prediction_plot[ts_ind * (2 * i + int(PLOT_WOMEN)):(
+#                 ts_ind * (2 * i + 1 + int(PLOT_WOMEN))), :]
+#
+#         axs[i, j].plot(x, scaler.inverse_transform(
+#             dataset.iloc[61 * (2 * i + int(PLOT_WOMEN)):61 * (2 * i + 1 + int(PLOT_WOMEN)), 4:])[:61, age_group],
+#                        label="actual values", linewidth=0.7, linestyle="dotted", color="black")
+#         axs[i, j].plot(x, train_plot[:, age_group], label="training", linewidth=0.7, color="forestgreen")
+#         axs[i, j].plot(x, test_plot[:, age_group], label="forecast", linewidth=0.7, color="hotpink")
+#         axs[i, j].set_title(titles[i] + dataset.iloc[4:, 4 + age_group].name)
+#
+# for i in range(4):
+#     axs[2, i].set_xlabel("Year")
+#
+# for i in range(3):
+#     axs[i, 0].set_ylabel("Mortality")
+# plt.savefig(MODEL_FOR_PLOTTING + ".png", dpi=300)
+# plt.show()
+#
+# # Forecast and actual data by year
+#
+# t_train_prediction_plot = train_prediction_plot.transpose(1, 0)
+# t_train_response_plot = train_response_plot.transpose(1, 0)
+# t_test_prediction_plot = test_prediction_plot.transpose(1, 0)
+# t_test_response_plot = test_response_plot.transpose(1, 0)
+#
+# t_train_plot = np.empty_like(dataset.iloc[:61, 4:]).transpose(1, 0)
+# t_train_plot[:] = np.nan
+# t_train_plot[:, :TRAINING_SIZE - WINDOW] = t_train_prediction_plot[:, :TRAINING_SIZE - WINDOW]
+#
+# t_test_plot = np.empty_like(dataset.iloc[:61, 4:]).transpose(1, 0)
+# t_test_plot[:] = np.nan
+# t_test_plot[:, TRAINING_SIZE + WINDOW:62] = t_test_prediction_plot[:, :61 - TRAINING_SIZE - WINDOW]
+#
+# plt.plot(
+#     scaler.inverse_transform(dataset.iloc[:, 4:]).transpose(1, 0)[:, 60],
+#     label="actual values",
+#     color="black",
+#     linewidth=0.7)
+# plt.plot(t_test_plot[:, 60], label="forecast", linewidth=0.7, color="red")
+# plt.legend(loc="upper left")
+# plt.title("Lithuanian male mortality in 2019 (plot of model " + MODEL_FOR_PLOTTING +")")
+# plt.savefig("mort" + MODEL_FOR_PLOTTING + ".png", dpi=300)
+# plt.show()
+#
+# plt.plot(
+#     np.log(
+#         scaler.inverse_transform(dataset.iloc[:, 4:]).transpose(1, 0))[:, 60],
+#     label="actual values",
+#     color="black",
+#     linewidth=0.7)
+# plt.plot(np.log(t_test_plot)[:, 60], label="forecast", color="red", linewidth=0.7)
+# plt.title("Lithuanian male logarithmic mortality in 2019 (plot of model " + MODEL_FOR_PLOTTING + ")")
+# plt.legend(loc="upper left")
+# plt.savefig("logmort" + MODEL_FOR_PLOTTING + ".png", dpi=300)
+# plt.show()
 
 # Illustrating the change in mortality in 1959-2019
 
