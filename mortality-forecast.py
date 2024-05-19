@@ -2,14 +2,16 @@ import datetime
 import math
 
 import matplotlib as mpl
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import plotly
 
 import numpy as np
 import pandas as pd
 
-import sklearn
-import sklearn.preprocessing
+# import sklearn
+# import sklearn.preprocessing
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 import tensorflow as tf
 from tensorflow.keras import layers
@@ -65,17 +67,17 @@ def clean_data(dataframes):
 lt_mortality_raw, lt_deaths_raw, lt_exposure_raw, \
     lv_mortality_raw, lv_deaths_raw, lv_exposure_raw, \
     ee_mortality_raw, ee_deaths_raw, ee_exposure_raw = read_data(
-    (
-        "./data/LT_Mx_5x1.txt", "./data/LT_Deaths_5x1.txt",
-        "./data/LT_Exposures_5x1.txt", "./data/LV_Mx_5x1.txt",
-        "./data/LV_Deaths_5x1.txt", "./data/LV_Exposures_5x1.txt",
-        "./data/EE_Mx_5x1.txt", "./data/EE_Deaths_5x1.txt",
-        "./data/EE_Exposures_5x1.txt"
-    ))
+        (
+            "./data/LT_Mx_5x1.txt", "./data/LT_Deaths_5x1.txt",
+            "./data/LT_Exposures_5x1.txt", "./data/LV_Mx_5x1.txt",
+            "./data/LV_Deaths_5x1.txt", "./data/LV_Exposures_5x1.txt",
+            "./data/EE_Mx_5x1.txt", "./data/EE_Deaths_5x1.txt",
+            "./data/EE_Exposures_5x1.txt"
+        ))
 
 lt_mortality, lv_mortality, ee_mortality = \
     lt_mortality_raw.replace(".", None), lv_mortality_raw.replace(".", None), \
-        ee_mortality_raw.replace(".", None)
+    ee_mortality_raw.replace(".", None)
 
 lt_mortality, lt_deaths, lt_exposure = clean_data(
     (lt_mortality, lt_deaths_raw, lt_exposure_raw))
@@ -90,8 +92,8 @@ lt_mortality["LT"], lv_mortality["LV"], ee_mortality["EE"] = 1, 1, 1
 
 lt_deaths, lt_mortality, lt_exposure = \
     lt_deaths.drop(lt_mortality.tail(1).index), \
-        lt_mortality.drop(lt_mortality.tail(1).index), \
-        lt_exposure.drop(lt_mortality.tail(1).index)
+    lt_mortality.drop(lt_mortality.tail(1).index), \
+    lt_exposure.drop(lt_mortality.tail(1).index)
 
 
 # Grouping of mortality into wider intervals
@@ -128,23 +130,23 @@ x = combined_groups
 
 lt_deaths, lt_exposure = \
     sum_groups(lt_deaths, combined_groups, summing_groups), \
-        sum_groups(lt_exposure, combined_groups, summing_groups)
+    sum_groups(lt_exposure, combined_groups, summing_groups)
 
 lv_deaths, lv_exposure = \
     sum_groups(lv_deaths, combined_groups, summing_groups), \
-        sum_groups(lv_exposure, combined_groups, summing_groups)
+    sum_groups(lv_exposure, combined_groups, summing_groups)
 
 ee_deaths, ee_exposure = \
     sum_groups(ee_deaths, combined_groups, summing_groups), \
-        sum_groups(ee_exposure, combined_groups, summing_groups)
+    sum_groups(ee_exposure, combined_groups, summing_groups)
 
 lt_mortality, lv_mortality, ee_mortality = \
     combine_mortality(
         lt_mortality, lt_deaths, lt_exposure, combined_groups, summing_groups), \
-        combine_mortality(
-            lv_mortality, lv_deaths, lv_exposure, combined_groups, summing_groups), \
-        combine_mortality(
-            ee_mortality, ee_deaths, ee_exposure, combined_groups, summing_groups)
+    combine_mortality(
+        lv_mortality, lv_deaths, lv_exposure, combined_groups, summing_groups), \
+    combine_mortality(
+        ee_mortality, ee_deaths, ee_exposure, combined_groups, summing_groups)
 
 
 # Data separation into training and test
@@ -176,7 +178,7 @@ dataset.insert(0, "LT", dataset.pop("LT"))
 dataset.insert(1, "LV", dataset.pop("LV"))
 dataset.insert(2, "EE", dataset.pop("EE"))
 
-scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))
+scaler = MinMaxScaler(feature_range=(0, 1))
 dataset.iloc[:, 4:] = scaler.fit_transform(dataset.iloc[:, 4:])
 
 train = dataset[np.mod(np.arange(dataset.shape[0]), 61) < TRAINING_SIZE]
@@ -370,13 +372,13 @@ def make_plots(model_to_plot, plot_women):
             train_plot[:] = np.nan
             ind = int(len(train_prediction_plot) / 6)
             train_plot[WINDOW:ind + WINDOW, :] = train_prediction_plot[
-                                                 ind * (2 * i + int(plot_women)):(ind * (2 * i + 1 + int(PLOT_WOMEN))),
+                                                 ind * (2 * i + int(plot_women)):(ind * (2 * i + 1 + int(plot_women))),
                                                  :]
 
             test_plot = np.empty_like(dataset.iloc[:61, 4:])
             test_plot[:] = np.nan
             ts_ind = int(len(test_prediction_plot) / 6)
-            test_plot[ind + 2 * WINDOW:len(test_plot), :] = test_prediction_plot[ts_ind * (2 * i + int(PLOT_WOMEN)):(
+            test_plot[ind + 2 * WINDOW:len(test_plot), :] = test_prediction_plot[ts_ind * (2 * i + int(plot_women)):(
                     ts_ind * (2 * i + 1 + int(plot_women))), :]
 
             axs[i, j].plot(x, scaler.inverse_transform(
@@ -437,7 +439,6 @@ make_plots("GRU", False)
 make_plots("GRU", True)
 make_plots("LSTM", False)
 make_plots("LSTM", True)
-
 
 # MODEL_FOR_PLOTTING = "GRU"
 
@@ -531,7 +532,8 @@ make_plots("LSTM", True)
 fig, axs = plt.subplots(3, 2, figsize=(14, 10))
 plt.subplots_adjust(wspace=0.1,
                     hspace=0.3)
-colors = plt.cm.jet(np.linspace(0, 1, 61))
+# colors = plt.cm.jet(np.linspace(0, 1, 61))
+colors = plt.get_cmap("jet")(np.linspace(0, 1, 61))
 
 for j in range(3):
     for i in range(61):
@@ -582,7 +584,7 @@ labels = ["Lithuanian males", "Lithuanian females", "Latvian males", "Latvian fe
 for j in range(6):
     plt.plot(np.unique(dataset.index),
              np.nanmean(np.log(scaler.inverse_transform(dataset.iloc[:, 4:]))[(61 * j):61 * (j + 1), :], axis=1),
-             color=plt.cm.Paired(j), label=labels[j])
+             color=colors[j], label=labels[j])
 
 plt.ylabel("Logarithmic mortality")
 plt.xlabel("Year")
