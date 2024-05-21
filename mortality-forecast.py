@@ -114,7 +114,7 @@ lt_deaths, lt_mortality, lt_exposure = (
 )
 
 
-# Grouping of mortality into wider intervals
+# Grouping mortality into wider intervals
 
 
 def sum_groups(dataframe, combined_groups, summing_groups):
@@ -201,7 +201,7 @@ def create_dataset(dataset, length):
             )
 
     return np.array(predictors), np.array(response), np.array(conditions)
-
+    # return tf.convert_to_tensor(predictors), tf.convert_to_tensor(response), tf.convert_to_tensor(conditions)
 
 dataset = pd.concat([lt_mortality, lv_mortality, ee_mortality])
 
