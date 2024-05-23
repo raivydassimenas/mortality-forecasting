@@ -14,7 +14,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 import tensorflow as tf
-from keras import layers
+from keras.layers import RNN, GRU, LSTM, GRUCell, LSTMCell, Dense
 # import keras
 
 # from cond_rnn import ConditionalRecurrent
@@ -195,13 +195,14 @@ def create_dataset(dataset, length):
             == 1
         ) and dataset.iloc[i : i + length + 1, :].index.is_monotonic_increasing:
             predictors.append(value.iloc[:, 4:])
-            response.append(dataset.iloc[: i + length, 4:])
+            response.append(dataset.iloc[i + length, 4:])
             conditions.append(
                 [value.iloc[0, 0], value.iloc[0, 1], value.iloc[0, 2], value.iloc[0, 3]]
             )
 
     return np.array(predictors), np.array(response), np.array(conditions)
     # return tf.convert_to_tensor(predictors), tf.convert_to_tensor(response), tf.convert_to_tensor(conditions)
+
 
 dataset = pd.concat([lt_mortality, lv_mortality, ee_mortality])
 
@@ -224,23 +225,26 @@ test_predictors, test_response, test_conditions = create_dataset(test, WINDOW)
 train_predictors = train_predictors.transpose(0, 2, 1)
 test_predictors = test_predictors.transpose(0, 2, 1)
 
+print(f"train_response dims: {train_response.shape}")
+print(f"test_response dims: {test_response.shape}")
+
 
 def create_model(model_type, units, hidden_layer_units):
     model_to_create = tf.keras.Sequential()
     if model_type == "GRU":
         if CONDITIONAL_RNN:
-            model_to_create.add(layers.RNN(layers.GRU(units)))
+            model_to_create.add(RNN(GRUCell(units)))
         else:
-            model_to_create.add(layers.GRU(units))
+            model_to_create.add(GRU(units))
     elif model_type == "LSTM":
         if CONDITIONAL_RNN:
-            model_to_create.add(layers.RNN(layers.LSTM(units)))
+            model_to_create.add(RNN(LSTMCell(units)))
         else:
-            model_to_create.add(layers.LSTM(units))
+            model_to_create.add(LSTM(units))
 
     if hidden_layer_units > 0:
-        model_to_create.add(layers.Dense(hidden_layer_units))
-    model_to_create.add(layers.Dense(11))
+        model_to_create.add(Dense(hidden_layer_units))
+    model_to_create.add(Dense(10))
 
     model_to_create.compile(loss="mean_squared_error", optimizer="adam")
     return model_to_create
@@ -250,7 +254,7 @@ def train_model(model_to_train):
     model_to_train.fit(
         x=[train_predictors, train_conditions] if CONDITIONAL_RNN else train_predictors,
         y=train_response,
-        epochs=500,
+        epochs=5,  # 500,
         batch_size=1,
     )
     return model_to_train
@@ -284,6 +288,7 @@ def get_results(model_type):
                 if CONDITIONAL_RNN
                 else test_predictors
             )
+
             results.append(
                 math.sqrt(
                     mean_squared_error(
@@ -300,7 +305,7 @@ def get_results(model_type):
                     )
                 )
             )
-        return results, models
+    return results, models
 
 
 # res = []
@@ -321,9 +326,9 @@ res, gru_models = get_results("GRU")
 #
 #         # model = tf.keras.Sequential()
 #         # if CONDITIONAL_RNN:
-#         #     model.add(ConditionalRecurrent(layers.GRU(GRU_UNITS)))
+#         #     model.add(ConditionalRecurrent(GRU(GRU_UNITS)))
 #         # else:
-#         #     model.add(layers.GRU(GRU_UNITS))
+#         #     model.add(GRU(GRU_UNITS))
 #         #
 #         # if HIDDEN_LAYER_UNITS > 0:
 #         #     model.add(layers.Dense(HIDDEN_LAYER_UNITS))
@@ -414,9 +419,9 @@ lstm_test_prediction = lstm_mod(
 )
 
 
-def make_plots(model_to_plot, plot_women):
-    train_prediction_plot = scaler.inverse_transform(model_to_plot[0])
-    test_prediction_plot = scaler.inverse_transform(model_to_plot[1])
+def make_plots(model_to_plot, train_prediction, test_prediction, plot_women):
+    train_prediction_plot = scaler.inverse_transform(train_prediction)
+    test_prediction_plot = scaler.inverse_transform(test_prediction)
     train_response_plot = scaler.inverse_transform(train_response)
     test_response_plot = scaler.inverse_transform(test_response)
 
@@ -533,10 +538,10 @@ def make_plots(model_to_plot, plot_women):
     # plt.show()
 
 
-make_plots("GRU", False)
-make_plots("GRU", True)
-make_plots("LSTM", False)
-make_plots("LSTM", True)
+make_plots("GRU", gru_train_prediction, gru_test_prediction, False)
+make_plots("GRU", gru_train_prediction, gru_test_prediction, True)
+make_plots("LSTM", lstm_train_prediction, lstm_test_prediction, False)
+make_plots("LSTM", lstm_train_prediction, lstm_test_prediction, True)
 
 # MODEL_FOR_PLOTTING = "GRU"
 
