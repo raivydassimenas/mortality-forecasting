@@ -225,9 +225,6 @@ test_predictors, test_response, test_conditions = create_dataset(test, WINDOW)
 train_predictors = train_predictors.transpose(0, 2, 1)
 test_predictors = test_predictors.transpose(0, 2, 1)
 
-print(f"train_response dims: {train_response.shape}")
-print(f"test_response dims: {test_response.shape}")
-
 
 def create_model(model_type, units, hidden_layer_units):
     model_to_create = tf.keras.Sequential()
@@ -451,6 +448,9 @@ def make_plots(model_to_plot, train_prediction, test_prediction, plot_women):
                 ),
                 :,
             ]
+
+            print(f"dataset: {dataset.head}")
+            print(f"dataset length: {len(dataset)}")
 
             axs[i, j].plot(
                 x,
