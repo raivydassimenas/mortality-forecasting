@@ -251,7 +251,7 @@ def train_model(model_to_train):
     model_to_train.fit(
         x=[train_predictors, train_conditions] if CONDITIONAL_RNN else train_predictors,
         y=train_response,
-        epochs=5,  # 500,
+        epochs=1,  # 500,
         batch_size=1,
     )
     return model_to_train
@@ -451,6 +451,7 @@ def make_plots(model_to_plot, train_prediction, test_prediction, plot_women):
 
             print(f"dataset: {dataset.head}")
             print(f"dataset length: {len(dataset)}")
+            print(f"dataset shape: {dataset.shape}")
 
             axs[i, j].plot(
                 x,
