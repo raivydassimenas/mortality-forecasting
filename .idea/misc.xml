@@ -3,8 +3,12 @@
   <component name="Black">
     <option name="sdkName" value="env_tensorflow" />
   </component>
+<<<<<<< HEAD
   <component name="ProjectRootManager" version="2" project-jdk-name="tf" project-jdk-type="Python SDK" />
   <component name="PyCharmDSProjectLayout">
     <option name="id" value="JupyterRightHiddenStructureLayout" />
   </component>
+=======
+  <component name="ProjectRootManager" version="2" project-jdk-name="env_tensorflow" project-jdk-type="Python SDK" />
+>>>>>>> dd83a67 (Update .idea files)
 </project>
